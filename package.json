@@ -23,3 +23,173 @@
   },
   "browserslist": [">0.2%", "not dead", "not ie <= 11", "not op_mini all"]
 }
+[Unit]
+Description=Sofia Core Hardware Node Monitor
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/user/sofia_monitor.py
+Restart=always
+RestartSec=10
+User=root
+
+[Install]
+WantedBy=multi-user.target
+import subprocess
+import time
+import datetime
+
+# Node Configuration
+NODE_NAME = "Samsung_HTB_Hub"
+WIRED_MAC = "84:a4:66:a8:82:67"
+MASTER_NODE_ID = "BLU_B135DL_PRIMARY"
+
+def send_master_alert(status_type, message):
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    payload = f"[{timestamp}] ALERT [{status_type}]: {message}"
+    # Red text for alerts
+    print(f"\033[91m{payload}\033[0m") 
+
+def attempt_self_heal():
+    """Attempts to refresh the network interface to reconnect the node."""
+    print(f"[RECOVERY] Initiating Self-Healing for {NODE_NAME}...")
+    try:
+        # Flushing ARP cache to force a fresh hardware handshake
+        subprocess.run(["ip", "neigh", "flush", "all"], check=True)
+        time.sleep(2)
+        print(f"[RECOVERY] Mesh cache flushed. Retrying handshake...")
+    except Exception as e:
+        send_master_alert("RECOVERY_FAILED", f"Could not flush mesh cache: {e}")
+
+def verify_lilith_shield():
+    try:
+        # Scanning for the specific hardware signature
+        scan = subprocess.check_output(["arp-scan", "--localnet"], timeout=8)
+        return WIRED_MAC.lower() in str(scan).lower()
+    except Exception as e:
+        send_master_alert("SYSTEM_ERROR", f"Hardware scan interrupted: {e}")
+        return False
+
+def monitor_cycle():
+    print(f"--- Sofia Core: Monitoring {NODE_NAME} ---")
+    consecutive_failures = 0
+    
+    while True:
+        if verify_lilith_shield():
+            if consecutive_failures > 0:
+                print(f"\033[92m[RESTORED] {NODE_NAME} back online. Shield integrity 100%.\033[0m")
+            else:
+                print(f"[SHIELD_ACTIVE] {NODE_NAME} verified at {datetime.datetime.now().strftime('%H:%M:%S')}")
+            consecutive_failures = 0
+        else:
+            consecutive_failures += 1
+            send_master_alert("SHIELD_BREACH", f"{NODE_NAME} disconnected. Failure count: {consecutive_failures}")
+            
+            # Trigger Self-Healing logic after 2 failed attempts
+            if consecutive_failures >= 2:
+                attempt_self_heal()
+        
+        # Standard heartbeat interval
+        time.sleep(60)
+
+if __name__ == "__main__":
+    monitor_cycle()
+# Monitor Pulse during Active Flight
+if not lingo_device.pulse_ok():
+    dfr_unit.set_mode("AUTONOMOUS_RTH")
+    dfr_unit.set_destination("HEMET_FLAGSHIP_SAFE_ZONE")
+    
+    # Notify the Sofia Core and Aigis Fleet of the Signal Loss
+    sofia_core.notify("COMMUNICATION SHIELD: CRITICAL SIGNAL LOSS")
+    sofia_core.vault.inject("LOG: DFR_UNIT_01_EXECUTING_FALLBACK", tag="SYSTEM_SAFETY")
+    
+    # Aigis Pre-emptive Lockdown
+    for car in aigis_fleet:
+        car.maintain_defensive_perimeter()
+        car.notify_driver("AERIAL FEED LOST: RETURNING TO SECURE MESH")
+import subprocess
+import time
+import datetime
+
+# Node Configuration
+NODE_NAME = "Samsung_HTB_Hub"
+WIRED_MAC = "84:a4:66:a8:82:67"
+MASTER_NODE_ID = "BLU_B135DL_PRIMARY"
+
+def send_master_alert(status_type, message):
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    payload = f"[{timestamp}] ALERT [{status_type}]: {message}"
+    # Red text for alerts
+    print(f"\033[91m{payload}\033[0m") 
+
+def attempt_self_heal():
+    """Attempts to refresh the network interface to reconnect the node."""
+    print(f"[RECOVERY] Initiating Self-Healing for {NODE_NAME}...")
+    try:
+        # Flushing ARP cache to force a fresh hardware handshake
+        subprocess.run(["ip", "neigh", "flush", "all"], check=True)
+        time.sleep(2)
+        print(f"[RECOVERY] Mesh cache flushed. Retrying handshake...")
+    except Exception as e:
+        send_master_alert("RECOVERY_FAILED", f"Could not flush mesh cache: {e}")
+
+def verify_lilith_shield():
+    try:
+        # Scanning for the specific hardware signature
+        scan = subprocess.check_output(["arp-scan", "--localnet"], timeout=8)
+        return WIRED_MAC.lower() in str(scan).lower()
+    except Exception as e:
+        send_master_alert("SYSTEM_ERROR", f"Hardware scan interrupted: {e}")
+        return False
+
+def monitor_cycle():
+    print(f"--- Sofia Core: Monitoring {NODE_NAME} ---")
+    consecutive_failures = 0
+    
+    while True:
+        if verify_lilith_shield():
+            if consecutive_failures > 0:
+                print(f"\033[92m[RESTORED] {NODE_NAME} back online. Shield integrity 100%.\033[0m")
+            else:
+                print(f"[SHIELD_ACTIVE] {NODE_NAME} verified at {datetime.datetime.now().strftime('%H:%M:%S')}")
+            consecutive_failures = 0
+        else:
+            consecutive_failures += 1
+            send_master_alert("SHIELD_BREACH", f"{NODE_NAME} disconnected. Failure count: {consecutive_failures}")
+            
+            # Trigger Self-Healing logic after 2 failed attempts
+            if consecutive_failures >= 2:
+                attempt_self_heal()
+        
+        # Standard heartbeat interval
+        time.sleep(60)
+
+if __name__ == "__main__":
+    monitor_cycle()
+#!/bin/bash
+
+LOG_FILE="/home/user/sofia_core_audit.log"
+REPORT_DATE=$(date +'%Y-%m-%d')
+
+echo "--- Sofia Core: Wealth & Prosperity Status Report ---"
+echo "Date: $REPORT_DATE"
+echo "Target Node: Samsung_HTB_Hub"
+echo "----------------------------------------------------"
+
+# Count total successful handshakes
+SUCCESS_COUNT=$(grep -c "SHIELD_ACTIVE" $LOG_FILE)
+# Count breach events
+BREACH_COUNT=$(grep -c "SHIELD_BREACH" $LOG_FILE)
+# Count successful self-healing recoveries
+RECOVERY_COUNT=$(grep -c "RESTORED" $LOG_FILE)
+
+echo "Total Verified Handshakes: $SUCCESS_COUNT"
+echo "Shield Breaches Detected:  $BREACH_COUNT"
+echo "Successful Self-Heals:     $RECOVERY_COUNT"
+
+if [ "$BREACH_COUNT" -eq 0 ]; then
+    echo "Status: SYMBIOTIC - Infrastructure is stable."
+else
+    echo "Status: ATTENTION - Parasitic instability detected."
+fi
+echo "----------------------------------------------------"
